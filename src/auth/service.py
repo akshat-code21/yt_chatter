@@ -56,9 +56,9 @@ async def provision_user(
 ) -> User:
     """Create the app-side user row on first authenticated request (JIT).
 
-    Everyone starts as a regular user; activation requires an invite
-    (invite-only beta). Admin promotions happen out-of-band via Clerk public
-    metadata (synced on login) or the ``ADMIN_CLERK_USER_IDS`` env var.
+    Open signup: everyone gets immediate active access. Admin promotions
+    happen out-of-band via Clerk public metadata (synced on login) or the
+    ``ADMIN_CLERK_USER_IDS`` env var.
     """
     settings = get_settings()
     is_configured_admin = clerk_user_id in settings.admin_clerk_user_id_set
@@ -69,11 +69,7 @@ async def provision_user(
         full_name=full_name,
         image_url=image_url,
         role=UserRole.ADMIN if is_configured_admin else UserRole.USER,
-        status=(
-            UserStatus.ACTIVE
-            if (is_configured_admin or settings.is_development)
-            else UserStatus.PENDING_INVITE
-        ),
+        status=UserStatus.ACTIVE,
         signup_method=signup_method,
         last_seen_at=datetime.now(UTC),
     )

@@ -1,4 +1,4 @@
-"""FastAPI dependencies - current user extraction, activation and admin gates."""
+"""FastAPI dependencies - current user extraction and admin gates."""
 
 import logging
 import time
@@ -38,7 +38,11 @@ _warned_no_role_claim = False
 
 
 class InviteRequiredError(HTTPException):
-    """403 signalling the frontend to show the invite-redemption screen."""
+    """Legacy 403 kept for backward-compat (no longer raised).
+
+    The invite-only beta is retired; open signup is enabled. Retained so any
+    stale imports keep working.
+    """
 
     def __init__(self) -> None:
         super().__init__(
@@ -188,6 +192,17 @@ async def get_current_authenticated_user(
     elif claimed_role == "user":
         user.role = UserRole.USER
 
+    # Open signup: invite enforcement is disabled. Lazily activate any legacy
+    # ``pending_invite`` rows so existing users are not locked out. Also covers
+    # the /api/auth/me path, which uses this dependency directly.
+    _raw_status = user.status.value if hasattr(user.status, "value") else str(user.status)
+    if _raw_status in (UserStatus.PENDING_INVITE.value, "pending_invite"):
+        user.status = UserStatus.ACTIVE
+        # Don't commit here - get_db commits at request end; in the /me path
+        # there may be no active transaction yet and commit would be a no-op
+        # flush risk. get_current_user handles the commit for gated routes.
+        await db.flush()
+
     # Expose identity to analytics middleware + route handlers
     request.state.user_id = str(user.id)
     request.state.user_role = user.role.value if hasattr(user.role, "value") else str(user.role)
@@ -219,21 +234,17 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_authenticated_user),
 ) -> User:
-    """Gate requiring an active account (or admin role).
+    """Gate requiring an authenticated, non-deactivated account.
 
-    - 403 ``invite_required`` when the account has not redeemed an invite yet.
+    Open signup: invite enforcement is disabled. Any legacy
+    ``pending_invite`` rows are lazily activated on first request so existing
+    users are not locked out.
     """
-    settings = get_settings()
-    role_value = user.role.value if hasattr(user.role, "value") else str(user.role)
     status_value = user.status.value if hasattr(user.status, "value") else str(user.status)
 
-    if (
-        not settings.is_development
-        and status_value == UserStatus.PENDING_INVITE.value
-        and role_value != UserRole.ADMIN.value
-    ):
+    if status_value in (UserStatus.PENDING_INVITE.value, "pending_invite"):
+        user.status = UserStatus.ACTIVE
         await db.commit()
-        raise InviteRequiredError()
 
     return user
 

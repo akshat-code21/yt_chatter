@@ -1,4 +1,4 @@
-"""Authentication endpoints - current user profile and invite redemption."""
+"""Authentication endpoints - current user profile (invite redeem kept for compat)."""
 
 import logging
 
@@ -19,11 +19,7 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 @router.get("/me", response_model=UserProfileResponse)
 async def read_current_user(user: User = Depends(get_current_authenticated_user)) -> User:
-    """Return the authenticated user's profile, role and account status.
-
-    The frontend polls this after sign-in; a ``pending_invite`` status routes
-    the user to the invite-redemption screen.
-    """
+    """Return the authenticated user's profile, role and account status."""
     return user
 
 
@@ -34,7 +30,7 @@ async def redeem_invite_endpoint(
     user: User = Depends(get_current_authenticated_user),
     db: AsyncSession = Depends(get_db),
 ) -> RedeemInviteResponse:
-    """Activate a pending account by redeeming an invite code."""
+    """Legacy no-op kept for backward-compat; open signup needs no code."""
     try:
         updated = await redeem_invite(db, user, body.code)
     except InviteError as exc:

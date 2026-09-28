@@ -85,19 +85,19 @@ class TestAccountLinking:
 
 
 class TestProvisionUser:
-    async def test_first_user_is_regular_and_pending(self, session_factory):
-        """No auto-admin: everyone starts as a pending regular user."""
+    async def test_first_user_is_regular_and_active(self, session_factory):
+        """Open signup: everyone starts as an active regular user."""
         async with session_factory() as db:
             user = await _make_user(db)
             assert user.role == UserRole.USER
-            assert user.status == UserStatus.PENDING_INVITE
+            assert user.status == UserStatus.ACTIVE
 
-    async def test_second_user_is_pending_regular(self, session_factory):
+    async def test_second_user_is_active_regular(self, session_factory):
         async with session_factory() as db:
             await _make_user(db, clerk_user_id="user_1")
             second = await _make_user(db, clerk_user_id="user_2", email="u2@example.com")
             assert second.role == UserRole.USER
-            assert second.status == UserStatus.PENDING_INVITE
+            assert second.status == UserStatus.ACTIVE
 
 
 class TestRedeemInvite:

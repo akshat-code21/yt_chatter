@@ -23,8 +23,8 @@ class UserRole(enum.StrEnum):
 class UserStatus(enum.StrEnum):
     """Lifecycle state.
 
-    pending_invite: authenticated with Clerk but has not redeemed an invite yet
-                    (invite-only signup gate).
+    pending_invite: legacy value from the retired invite-only beta
+                    (auto-activated to active on next request).
     active: full access.
     deactivated: blocked from the app (retains history for analytics).
     """
@@ -100,7 +100,7 @@ class User(Base):
     status: Mapped[UserStatus] = mapped_column(
         SAEnum(UserStatus, name="user_status", native_enum=False),
         nullable=False,
-        default=UserStatus.PENDING_INVITE,
+        default=UserStatus.ACTIVE,
     )
 
     signup_method: Mapped[str | None] = mapped_column(String(50), nullable=True)

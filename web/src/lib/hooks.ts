@@ -216,11 +216,10 @@ export function useMe() {
     staleTime: 60_000,
   });
 
-  // Surface semantic flags for gating UI (invite gate, admin controls).
+  // Invite-only beta is retired: open signup, so never gate on invite status.
+  // `inviteRequired` is kept (always false) for backward-compat with callers.
   const error = query.error;
-  const inviteRequired =
-    (error instanceof ApiError && error.code === "invite_required") ||
-    query.data?.status === "pending_invite";
+  const inviteRequired = false;
   const unauthorized =
     error instanceof ApiError &&
     (error.status === 401 || error.code === "unauthorized" || error.status === 0);
